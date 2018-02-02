@@ -74,12 +74,7 @@ out = checklic(toolbox);
 function out = checklic(toolbox)
 % CHECKLIC - Outputs 1 if the license is in use, otherwise 0
 
-a = strcat(matlabroot,'/etc/maci64/lmutil lmstat -c',{' '},matlabroot,'/licenses/network.lic -a licence.snapshot -f'); 
-b = toolbox;
-
-command = strcat(a{1},{' '},b);
-
-[status,result] = system(command{1});
+result = licenseuse(toolbox);
 
 parse = regexp(result, '[\f\n\r]', 'split');
 
@@ -94,3 +89,45 @@ if ~isequal(nums(1),nums(2))
 else
     out = 0;
 end    
+
+end
+
+function lt = licenseuse(toolbox)
+% LICENSEUSE - Use lmutil to obtain information on the users that are currently uses a license
+%   Based on licenseuse version 1.3 by M. A. Hopcroft (https://se.mathworks.com/matlabcentral/fileexchange/28981-licenseuse)
+cdir=cd;
+
+
+% Determine path to lmutil
+if isunix % v2.11
+    lmExe='lmutil';
+else
+    lmExe='lmutil.exe';
+end
+
+lmPath=[matlabroot filesep 'bin' filesep computer('arch') filesep]; % prior to R2010b
+if ~exist([lmPath lmExe],'file')
+    lmPath=[matlabroot filesep 'etc' filesep computer('arch') filesep]; % R2010b+
+    if ~exist([lmPath lmExe],'file')
+        fprintf(1,'ERROR: "%s" not found in bin/ or etc/ locations!\n\n',lmExe);
+        return
+    end
+end
+
+cd(lmPath);
+
+
+% Execute license manager command
+[ltstat, lt]=system(['.' filesep 'lmutil lmstat -c "' matlabroot filesep 'licenses' filesep 'network.lic" -f ' toolbox]);
+cd(cdir);
+
+if ltstat ~= 0
+    fprintf(1,'ERROR: "%s"\n',strtrim(lt));
+    if strfind(lt, 'No such file')
+        fprintf(1,'On Linux you may need to upgrade the package "lsb"\n  (see %s)\n',...
+            'https://www.mathworks.com/support/solutions/en/data/1-GLXUHV/index.html?product=ML&solution=1-GLXUHV');
+    end
+    error('OS returned error %d when executing lmutil',ltstat);
+end
+end
+end
