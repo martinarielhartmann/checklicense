@@ -72,7 +72,8 @@ end
 out = checklic(toolbox);
 
 function out = checklic(toolbox)
-% CHECKLIC - Outputs 1 if the license is in use, otherwise 0
+% CHECKLIC - Outputs 1 if the license is in use (or if there is an
+% error such as 'lmgrd not running'), otherwise 0
 
 result = licenseuse(toolbox);
 
@@ -83,12 +84,17 @@ findline = cellfun(@(x) strfind(x,'Users'),parse,'UniformOutput',false);
 ind = find(~cellfun(@isempty,findline) == 1);
 
 nums= str2double( regexp(parse{ind},'.* (\d+).* (\d+)','tokens','once') );
-
-if ~isequal(nums(1),nums(2))
-    out = 1;
-else
-    out = 0;
-end    
+try
+    if ~isequal(nums(1),nums(2))
+        out = 1;
+    else
+        out = 0;
+    end    
+catch
+disp(['WARNING: there might be an error while trying to read data ' ...
+      'from license server system. Trying again...'])
+out = 1;
+end
 
 end
 
